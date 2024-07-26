@@ -55,6 +55,18 @@
             white-space: pre-wrap;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            var socket = io();
+
+            socket.on('update', function (msg) {
+                var output = document.getElementById('output');
+                output.innerHTML += msg.data + '<br>';
+                output.scrollTop = output.scrollHeight;
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="container">
@@ -86,10 +98,8 @@
             <button type="submit">Execute</button>
         </form>
         <br>
-        {% if output %}
         <h2>Output:</h2>
-        <pre>{{ output }}</pre>
-        {% endif %}
+        <pre id="output"></pre>
     </div>
 </body>
 </html>

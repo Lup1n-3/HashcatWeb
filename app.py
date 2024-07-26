@@ -1,17 +1,18 @@
 from flask import Flask, request, render_template
+from flask_socketio import SocketIO, emit
 import subprocess
 import os
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['UPLOAD_FOLDER'] = 'uploads'
+socketio = SocketIO(app)
 
 # Ruta completa a Hashcat
-HASHCAT_PATH = '/usr/bin/hashcat'  # Ruta en Kali Linux
+HASHCAT_PATH = '/usr/bin/hashcat'  # Actualiza esta ruta en Kali Linux
 
 # Aseguramos que la carpeta de uploads existe
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
 
 @app.route('/')
 def index():
@@ -42,41 +43,39 @@ def submit():
     device_option = '-D 1' if use_gpu else ''
     command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
-    # Imprimir el comando para depuración
-    print(f"Ejecutando comando: {command}")
-
-    try:
+    # Ejecutar el comando y enviar actualizaciones al cliente en tiempo real
+    def run_command(command):
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        output, error = process.communicate()
+        for line in process.stdout:
+            socketio.emit('update', {'data': line})
+        process.stdout.close()
+        process.wait()
         if process.returncode != 0:
-            output = error
-    except Exception as e:
-        output = f"Error: {str(e)}"
+            error = process.stderr.read()
+            socketio.emit('update', {'data': error})
 
-    # Imprimir salida para depuración
-    print(f"Salida: {output}")
+    socketio.start_background_task(run_command, command)
 
-    return render_template('index.html', output=output)
+    return render_template('index.html')
 
 @app.route('/terminal', methods=['POST'])
 def terminal():
     command = request.form['command']
     
-    # Imprimir el comando para depuración
-    print(f"Ejecutando comando en terminal: {command}")
-
-    try:
+    # Ejecutar el comando y enviar actualizaciones al cliente en tiempo real
+    def run_command(command):
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        output, error = process.communicate()
+        for line in process.stdout:
+            socketio.emit('update', {'data': line})
+        process.stdout.close()
+        process.wait()
         if process.returncode != 0:
-            output = error
-    except Exception as e:
-        output = f"Error: {str(e)}"
+            error = process.stderr.read()
+            socketio.emit('update', {'data': error})
 
-    # Imprimir salida para depuración
-    print(f"Salida de terminal: {output}")
+    socketio.start_background_task(run_command, command)
 
-    return render_template('index.html', output=output)
+    return render_template('index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    socketio.run(app, debug=True, host='0.0.0.0')
