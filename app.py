@@ -1,8 +1,13 @@
 from flask import Flask, request, render_template
+from flask_socketio import SocketIO, emit
 import subprocess
 import os
+import threading
+import time
 
 app = Flask(__name__)
+socketio = SocketIO(app, async_mode=None)
+
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -42,25 +47,32 @@ def submit():
     device_option = '-D 1' if use_gpu else ''
     command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
-    # Imprimir el comando para depuración
-    print(f"Ejecutando comando: {command}")
-
-    # Ejecutar el comando en una nueva terminal
+    # Ejecutar el comando Hashcat en una nueva terminal
     terminal_command = f'gnome-terminal -- bash -c "{command}; exec bash"'
     try:
         subprocess.Popen(terminal_command, shell=True)
     except Exception as e:
         print(f"Error: {str(e)}")
 
-    return render_template('index.html', output="Hashcat command started in a new terminal.")
+    # Ejecutar Hashcat en segundo plano para capturar la salida
+    def run_hashcat():
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        while True:
+            output = process.stdout.readline()
+            if output:
+                socketio.emit('update', {'output': output.strip()})
+            if process.poll() is not None:
+                break
+            time.sleep(2)  # Esperar 2 segundos entre cada actualización
+
+    threading.Thread(target=run_hashcat).start()
+
+    return render_template('index.html')
 
 @app.route('/terminal', methods=['POST'])
 def terminal():
     command = request.form['command']
     
-    # Imprimir el comando para depuración
-    print(f"Ejecutando comando en terminal: {command}")
-
     # Ejecutar el comando en una nueva terminal
     terminal_command = f'gnome-terminal -- bash -c "{command}; exec bash"'
     try:
@@ -68,7 +80,15 @@ def terminal():
     except Exception as e:
         print(f"Error: {str(e)}")
 
-    return render_template('index.html', output="Terminal command started in a new terminal.")
+    return render_template('index.html')
+
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    socketio.run(app, debug=True, host='0.0.0.0')
