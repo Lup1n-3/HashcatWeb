@@ -9,7 +9,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ruta completa a Hashcat
 HASHCAT_PATH = '/usr/bin/hashcat'  # Ruta en Kali Linux
-OUTPUT_FILE = 'hashcat_output.txt'
 
 # Aseguramos que la carpeta de uploads existe
 if not os.path.exists(UPLOAD_FOLDER):
@@ -17,12 +16,13 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 # Variables para manejar procesos de hashcat y salida en tiempo real
 hashcat_process = None
+hashcat_output_file = 'hashcat_output.txt'
 
 @app.route('/')
 def index():
     output = ''
-    if os.path.exists(OUTPUT_FILE):
-        with open(OUTPUT_FILE, 'r') as file:
+    if os.path.exists(hashcat_output_file):
+        with open(hashcat_output_file, 'r') as file:
             output = file.read()
     return render_template('index.html', output=output)
 
@@ -56,48 +56,47 @@ def submit():
     device_option = '-D 1' if use_gpu else ''
     command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
-    # Redirigir salida a un archivo
-    xterm_command = f'xterm -hold -e "bash -c \'{command} > {OUTPUT_FILE} 2>&1\'"'
+    # Escapar el comando para zsh
+    xterm_command = f'xterm -hold -e "bash -c \'{command} | tee {hashcat_output_file}\'"'
 
     # Imprimir el comando para depuración
     print(f"Ejecutando comando: {xterm_command}")
 
     try:
         hashcat_process = subprocess.Popen(xterm_command, shell=True)
-        time.sleep(2)  # Asegúrate de darle tiempo al xterm para iniciar
-        return render_template('index.html', output='Hashcat started. Check the output below.')
+        time.sleep(2)  # Dar tiempo para que xterm se abra y comience a ejecutar
     except Exception as e:
-        return render_template('index.html', output=f"Error: {str(e)}")
+        output = f"Error: {str(e)}"
+        return render_template('index.html', output=output)
+
+    return render_template('index.html', output="Hashcat started. Check the output below.")
 
 @app.route('/update', methods=['POST'])
 def update():
+    global hashcat_process
     if hashcat_process and hashcat_process.poll() is None:
         try:
-            # Enviar 's' usando xdotool
-            os.system('xdotool search --name "xterm" key s')
-            return render_template('index.html', output="Sent 's' to hashcat.")
+            # Enviar 's' a la terminal xterm
+            os.system(f'echo s > /proc/{hashcat_process.pid}/fd/0')
+            time.sleep(1)  # Esperar un momento para que el proceso maneje el comando
+            return index()  # Actualizar la página para mostrar la salida
         except Exception as e:
             return render_template('index.html', output=f"Error sending 's': {str(e)}")
     return render_template('index.html', output="Hashcat is not running.")
 
 @app.route('/quit', methods=['POST'])
 def quit():
+    global hashcat_process
     if hashcat_process and hashcat_process.poll() is None:
         try:
-            # Enviar 'q' usando xdotool
-            os.system('xdotool search --name "xterm" key q')
+            # Enviar 'q' a la terminal xterm y terminar el proceso
+            os.system(f'echo q > /proc/{hashcat_process.pid}/fd/0')
             hashcat_process.terminate()  # Terminate the process
+            hashcat_process = None
             return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
         except Exception as e:
             return render_template('index.html', output=f"Error sending 'q': {str(e)}")
     return render_template('index.html', output="Hashcat is not running.")
-
-@app.route('/output')
-def output():
-    if os.path.exists(OUTPUT_FILE):
-        with open(OUTPUT_FILE, 'r') as file:
-            return file.read()
-    return 'No output available.'
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
