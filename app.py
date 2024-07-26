@@ -1,8 +1,6 @@
 from flask import Flask, request, render_template
 import subprocess
 import os
-import signal
-import time
 import threading
 
 app = Flask(__name__)
@@ -22,14 +20,14 @@ output_lines = []
 
 def capture_output(process):
     global output_lines
-    for line in iter(process.stdout.readline, b''):
-        output_lines.append(line.decode('utf-8'))
+    for line in iter(process.stdout.readline, ''):
+        output_lines.append(line)
         if process.poll() is not None:
             break
 
 @app.route('/')
 def index():
-    return render_template('index.html', output='\n'.join(output_lines))
+    return render_template('index.html', output=''.join(output_lines))
 
 @app.route('/submit', methods=['POST'])
 def submit():
@@ -73,14 +71,14 @@ def submit():
     except Exception as e:
         output_lines.append(f"Error: {str(e)}")
 
-    return render_template('index.html', output='\n'.join(output_lines))
+    return render_template('index.html', output=''.join(output_lines))
 
 @app.route('/update', methods=['POST'])
 def update():
     global hashcat_process
     if hashcat_process and hashcat_process.poll() is None:
         try:
-            hashcat_process.stdin.write(b's\n')
+            hashcat_process.stdin.write('s\n')
             hashcat_process.stdin.flush()
             return render_template('index.html', output="Sent 's' to hashcat.")
         except Exception as e:
@@ -92,7 +90,7 @@ def quit():
     global hashcat_process
     if hashcat_process and hashcat_process.poll() is None:
         try:
-            hashcat_process.stdin.write(b'q\n')
+            hashcat_process.stdin.write('q\n')
             hashcat_process.stdin.flush()
             hashcat_process.terminate()  # Terminate the process
             hashcat_process = None
