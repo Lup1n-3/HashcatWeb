@@ -45,18 +45,14 @@ def submit():
     # Imprimir el comando para depuración
     print(f"Ejecutando comando: {command}")
 
+    # Ejecutar el comando en una nueva terminal
+    terminal_command = f'gnome-terminal -- bash -c "{command}; exec bash"'
     try:
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        output, error = process.communicate()
-        if process.returncode != 0:
-            output = error
+        subprocess.Popen(terminal_command, shell=True)
     except Exception as e:
-        output = f"Error: {str(e)}"
+        print(f"Error: {str(e)}")
 
-    # Imprimir salida para depuración
-    print(f"Salida: {output}")
-
-    return render_template('index.html', output=output)
+    return render_template('index.html', output="Hashcat command started in a new terminal.")
 
 @app.route('/terminal', methods=['POST'])
 def terminal():
@@ -65,18 +61,14 @@ def terminal():
     # Imprimir el comando para depuración
     print(f"Ejecutando comando en terminal: {command}")
 
+    # Ejecutar el comando en una nueva terminal
+    terminal_command = f'gnome-terminal -- bash -c "{command}; exec bash"'
     try:
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        output, error = process.communicate()
-        if process.returncode != 0:
-            output = error
+        subprocess.Popen(terminal_command, shell=True)
     except Exception as e:
-        output = f"Error: {str(e)}"
+        print(f"Error: {str(e)}")
 
-    # Imprimir salida para depuración
-    print(f"Salida de terminal: {output}")
-
-    return render_template('index.html', output=output)
+    return render_template('index.html', output="Terminal command started in a new terminal.")
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
