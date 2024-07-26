@@ -53,7 +53,12 @@
             padding: 10px;
             border-radius: 8px;
             white-space: pre-wrap;
-            word-wrap: break-word;
+        }
+        .button-container {
+            margin-top: 10px;
+        }
+        .button-container button {
+            margin-right: 10px;
         }
     </style>
 </head>
@@ -86,6 +91,15 @@
             <input type="text" name="command" id="command" placeholder="Enter command to execute">
             <button type="submit">Execute</button>
         </form>
+        <br>
+        <div class="button-container">
+            <form action="/update" method="post">
+                <button type="submit">Update Status</button>
+            </form>
+            <form action="/quit" method="post">
+                <button type="submit">Quit</button>
+            </form>
+        </div>
         <br>
         {% if output %}
         <h2>Output:</h2>
