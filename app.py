@@ -49,6 +49,7 @@ def submit():
     print(f"Ejecutando comando: {command}")
 
     try:
+        # Ejecutar el comando y leer la salida en tiempo real
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         while True:
             output = process.stdout.readline()
@@ -57,10 +58,11 @@ def submit():
             if output:
                 socketio.emit('update', {'data': output.strip()})
             time.sleep(0.1)
-        rc = process.poll()
+        error = process.stderr.read()
+        if error:
+            socketio.emit('update', {'data': error.strip()})
     except Exception as e:
-        output = f"Error: {str(e)}"
-        socketio.emit('update', {'data': output})
+        socketio.emit('update', {'data': f"Error: {str(e)}"})
 
     return render_template('index.html')
 
@@ -72,6 +74,7 @@ def terminal():
     print(f"Ejecutando comando en terminal: {command}")
 
     try:
+        # Ejecutar el comando y leer la salida en tiempo real
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         while True:
             output = process.stdout.readline()
@@ -80,10 +83,11 @@ def terminal():
             if output:
                 socketio.emit('update', {'data': output.strip()})
             time.sleep(0.1)
-        rc = process.poll()
+        error = process.stderr.read()
+        if error:
+            socketio.emit('update', {'data': error.strip()})
     except Exception as e:
-        output = f"Error: {str(e)}"
-        socketio.emit('update', {'data': output})
+        socketio.emit('update', {'data': f"Error: {str(e)}"})
 
     return render_template('index.html')
 
