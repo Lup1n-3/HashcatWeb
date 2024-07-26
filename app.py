@@ -72,14 +72,14 @@ def submit():
 @app.route('/update', methods=['POST'])
 def update():
     try:
-        # Limpiar el archivo de salida
-        with open(hashcat_output_file, 'w') as file:
-            file.write('')  # Limpiar el contenido del archivo
-        
-        # Enviar la tecla 's' a la sesión tmux
+        # Enviar la tecla 'l' para limpiar la pantalla en la sesión tmux
+        subprocess.call(['tmux', 'send-keys', '-t', tmux_session_name, 'C-l', 'C-m'])
+        time.sleep(1)  # Esperar un momento para que el comando de limpiar pantalla sea procesado
+
+        # Enviar la tecla 's' para actualizar el status
         subprocess.call(['tmux', 'send-keys', '-t', tmux_session_name, 's', 'C-m'])
         time.sleep(2)  # Esperar un momento para que el proceso maneje el comando
-        
+
         # Leer la salida actualizada
         output = ''
         if os.path.exists(hashcat_output_file):
