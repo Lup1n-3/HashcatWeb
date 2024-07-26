@@ -5,62 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hashcat Web Interface</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-        }
-        label {
-            margin-top: 10px;
-        }
-        input[type="file"],
-        input[type="number"],
-        select,
-        button,
-        input[type="text"] {
-            padding: 10px;
-            margin-top: 5px;
-        }
-        button {
-            background-color: #5cb85c;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #4cae4c;
-        }
-        pre {
-            background: #333;
-            color: #fff;
-            padding: 10px;
-            border-radius: 8px;
-            white-space: pre-wrap;
-        }
+        /* Puedes agregar tu estilo aquí */
     </style>
+    <script>
+        function updateOutput() {
+            fetch('/output')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('output').textContent = data;
+                });
+        }
+
+        setInterval(updateOutput, 2000);  // Actualiza cada 2 segundos
+    </script>
 </head>
 <body>
     <div class="container">
         <h1>Hashcat Web Interface</h1>
         <form action="/submit" method="post" enctype="multipart/form-data">
-            <label for="hash_file">Hash File:</label>
+            <label for="hash_file">Upload Hash File:</label>
             <input type="file" name="hash_file" id="hash_file" required>
             <br>
             <label for="charset">Charset:</label>
@@ -68,7 +31,7 @@
                 <option value="numeric">Numeric</option>
                 <option value="alpha">Alphabetic</option>
                 <option value="alphanumeric">Alphanumeric</option>
-                <option value="special">Special</option>
+                <option value="special">Special Characters</option>
             </select>
             <br>
             <label for="length">Password Length:</label>
@@ -77,21 +40,16 @@
             <label for="use_gpu">Use GPU:</label>
             <input type="checkbox" name="use_gpu" id="use_gpu">
             <br>
-            <button type="submit">Submit</button>
+            <button type="submit">Start Hashcat</button>
         </form>
-        <br>
         <form action="/update" method="post">
-            <button type="submit">Update Status</button>
+            <button type="submit">Update</button>
         </form>
-        <br>
         <form action="/quit" method="post">
             <button type="submit">Quit</button>
         </form>
-        <br>
-        {% if output %}
         <h2>Output:</h2>
-        <pre>{{ output }}</pre>
-        {% endif %}
+        <pre id="output">{{ output }}</pre>
     </div>
 </body>
 </html>

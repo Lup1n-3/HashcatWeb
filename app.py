@@ -92,5 +92,12 @@ def quit():
             return render_template('index.html', output=f"Error sending 'q': {str(e)}")
     return render_template('index.html', output="Hashcat is not running.")
 
+@app.route('/output')
+def output():
+    if os.path.exists(OUTPUT_FILE):
+        with open(OUTPUT_FILE, 'r') as file:
+            return file.read()
+    return 'No output available.'
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
