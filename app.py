@@ -15,6 +15,7 @@ OUTPUT_FILE = 'hashcat_output.txt'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+# Variables para manejar procesos de hashcat y salida en tiempo real
 hashcat_process = None
 
 @app.route('/')
