@@ -53,19 +53,9 @@
             padding: 10px;
             border-radius: 8px;
             white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
-    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var socket = io.connect('http://' + document.domain + ':' + location.port);
-            socket.on('update', function(data) {
-                var output = document.getElementById('output');
-                output.textContent += data.output + '\n';
-                output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
-            });
-        });
-    </script>
 </head>
 <body>
     <div class="container">
@@ -97,8 +87,10 @@
             <button type="submit">Execute</button>
         </form>
         <br>
+        {% if output %}
         <h2>Output:</h2>
-        <pre id="output"></pre>
+        <pre>{{ output }}</pre>
+        {% endif %}
     </div>
 </body>
 </html>

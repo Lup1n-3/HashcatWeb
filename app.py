@@ -13,17 +13,12 @@ HASHCAT_PATH = '/usr/bin/hashcat'  # Ruta en Kali Linux
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Variable global para almacenar el proceso de hashcat
-hashcat_process = None
-
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    global hashcat_process
-    
     hash_file = request.files['hash_file']
     if hash_file:
         hash_file_path = os.path.join(app.config['UPLOAD_FOLDER'], hash_file.filename)
@@ -51,15 +46,14 @@ def submit():
     print(f"Ejecutando comando: {command}")
 
     # Terminar cualquier instancia previa de Hashcat
-    if hashcat_process:
-        hashcat_process.terminate()
-        hashcat_process.wait()
-
     try:
-        hashcat_process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        output, error = hashcat_process.communicate()
-        if hashcat_process.returncode != 0:
-            output = error
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        output = ''
+        for line in process.stdout:
+            output += line
+        error = process.stderr.read().decode()
+        if process.returncode != 0:
+            output += error
     except Exception as e:
         output = f"Error: {str(e)}"
 
@@ -77,9 +71,12 @@ def terminal():
 
     try:
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        output, error = process.communicate()
+        output = ''
+        for line in process.stdout:
+            output += line
+        error = process.stderr.read().decode()
         if process.returncode != 0:
-            output = error
+            output += error
     except Exception as e:
         output = f"Error: {str(e)}"
 
