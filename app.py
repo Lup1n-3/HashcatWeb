@@ -15,6 +15,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 # Variables para manejar procesos de hashcat y salida en tiempo real
+tmux_session_name = 'hashcat_session'
 hashcat_output_file = 'hashcat_output.txt'
 
 @app.route('/')
@@ -27,11 +28,8 @@ def index():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    global hashcat_process
-
     # Detener cualquier proceso de Hashcat ya en ejecución
-    if os.path.exists(hashcat_output_file):
-        os.remove(hashcat_output_file)
+    os.system(f'tmux kill-session -t {tmux_session_name} 2>/dev/null')
 
     hash_file = request.files['hash_file']
     if hash_file:
@@ -56,15 +54,15 @@ def submit():
     device_option = '-D 1' if use_gpu else ''
     command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
-    # Ejecutar Hashcat en una nueva ventana xterm
-    xterm_command = f'xterm -hold -e "bash -c \'{command} | tee {hashcat_output_file}\'"'
+    # Ejecutar Hashcat en una nueva sesión tmux
+    tmux_command = f'tmux new-session -d -s {tmux_session_name} bash -c "{command} | tee {hashcat_output_file}"'
 
     # Imprimir el comando para depuración
-    print(f"Ejecutando comando: {xterm_command}")
+    print(f"Ejecutando comando: {tmux_command}")
 
     try:
-        subprocess.Popen(xterm_command, shell=True)
-        time.sleep(2)  # Dar tiempo para que xterm se abra y comience a ejecutar
+        subprocess.Popen(tmux_command, shell=True)
+        time.sleep(2)  # Dar tiempo para que tmux se inicie y comience a ejecutar
     except Exception as e:
         output = f"Error: {str(e)}"
         return render_template('index.html', output=output)
@@ -74,9 +72,8 @@ def submit():
 @app.route('/update', methods=['POST'])
 def update():
     try:
-        # Usar os.system para enviar la tecla 's' a la sesión de xterm
-        # Nota: Esto puede no funcionar si xterm está en primer plano, considera usar tmux para una integración más robusta
-        subprocess.call(['xdotool', 'search', '--name', 'xterm', 'key', 's'])
+        # Enviar la tecla 's' a la sesión tmux
+        subprocess.call(['tmux', 'send-keys', '-t', tmux_session_name, 's', 'C-m'])
         time.sleep(1)  # Esperar un momento para que el proceso maneje el comando
         return index()  # Actualizar la página para mostrar la salida
     except Exception as e:
@@ -85,10 +82,10 @@ def update():
 @app.route('/quit', methods=['POST'])
 def quit():
     try:
-        # Usar os.system para enviar la tecla 'q' a la sesión de xterm
-        # Nota: Esto puede no funcionar si xterm está en primer plano, considera usar tmux para una integración más robusta
-        subprocess.call(['xdotool', 'search', '--name', 'xterm', 'key', 'q'])
+        # Enviar la tecla 'q' a la sesión tmux y luego matar la sesión
+        subprocess.call(['tmux', 'send-keys', '-t', tmux_session_name, 'q', 'C-m'])
         time.sleep(1)  # Esperar un momento para que el proceso maneje el comando
+        subprocess.call(['tmux', 'kill-session', '-t', tmux_session_name])
         return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
     except Exception as e:
         return render_template('index.html', output=f"Error sending 'q': {str(e)}")
