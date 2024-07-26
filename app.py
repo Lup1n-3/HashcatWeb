@@ -57,8 +57,14 @@ def submit():
         xterm_command = f'xterm -hold -e "{command}"'
         hashcat_process = subprocess.Popen(xterm_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         output = ''
-        for line in iter(hashcat_process.stdout.readline, b''):
-            output += line.decode('utf-8')
+        while True:
+            line = hashcat_process.stdout.readline()
+            if not line:
+                break
+            output += line
+        error = hashcat_process.stderr.read()
+        if error:
+            output += error
     except Exception as e:
         output = f"Error: {str(e)}"
 
@@ -72,8 +78,8 @@ def update():
     global hashcat_process
     if hashcat_process and hashcat_process.poll() is None:
         try:
-            hashcat_process.stdin.write(b's\n')
-            hashcat_process.stdin.flush()
+            # Usar os.system para enviar la tecla 's' a la terminal en primer plano
+            os.system(f'echo s > /proc/{hashcat_process.pid}/fd/0')
             return render_template('index.html', output="Sent 's' to hashcat.")
         except Exception as e:
             return render_template('index.html', output=f"Error sending 's': {str(e)}")
@@ -84,8 +90,8 @@ def quit():
     global hashcat_process
     if hashcat_process and hashcat_process.poll() is None:
         try:
-            hashcat_process.stdin.write(b'q\n')
-            hashcat_process.stdin.flush()
+            # Usar os.system para enviar la tecla 'q' a la terminal en primer plano
+            os.system(f'echo q > /proc/{hashcat_process.pid}/fd/0')
             hashcat_process.terminate()  # Terminate the process
             hashcat_process = None
             return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
