@@ -45,13 +45,12 @@ def submit():
     # Imprimir el comando para depuración
     print(f"Ejecutando comando: {command}")
 
-    # Terminar cualquier instancia previa de Hashcat
     try:
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         output = ''
         for line in process.stdout:
             output += line
-        error = process.stderr.read().decode()
+        error = process.stderr.read()
         if process.returncode != 0:
             output += error
     except Exception as e:
@@ -74,7 +73,7 @@ def terminal():
         output = ''
         for line in process.stdout:
             output += line
-        error = process.stderr.read().decode()
+        error = process.stderr.read()
         if process.returncode != 0:
             output += error
     except Exception as e:
