@@ -1,13 +1,8 @@
 from flask import Flask, request, render_template
-from flask_socketio import SocketIO, emit
 import subprocess
 import os
-import threading
-import time
 
 app = Flask(__name__)
-socketio = SocketIO(app, async_mode=None)
-
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -18,12 +13,17 @@ HASHCAT_PATH = '/usr/bin/hashcat'  # Ruta en Kali Linux
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+# Variable global para almacenar el proceso de hashcat
+hashcat_process = None
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/submit', methods=['POST'])
 def submit():
+    global hashcat_process
+    
     hash_file = request.files['hash_file']
     if hash_file:
         hash_file_path = os.path.join(app.config['UPLOAD_FOLDER'], hash_file.filename)
@@ -47,48 +47,46 @@ def submit():
     device_option = '-D 1' if use_gpu else ''
     command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
-    # Ejecutar el comando Hashcat en una nueva terminal
-    terminal_command = f'gnome-terminal -- bash -c "{command}; exec bash"'
+    # Imprimir el comando para depuración
+    print(f"Ejecutando comando: {command}")
+
+    # Terminar cualquier instancia previa de Hashcat
+    if hashcat_process:
+        hashcat_process.terminate()
+        hashcat_process.wait()
+
     try:
-        subprocess.Popen(terminal_command, shell=True)
+        hashcat_process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        output, error = hashcat_process.communicate()
+        if hashcat_process.returncode != 0:
+            output = error
     except Exception as e:
-        print(f"Error: {str(e)}")
+        output = f"Error: {str(e)}"
 
-    # Ejecutar Hashcat en segundo plano para capturar la salida
-    def run_hashcat():
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        while True:
-            output = process.stdout.readline()
-            if output:
-                socketio.emit('update', {'output': output.strip()})
-            if process.poll() is not None:
-                break
-            time.sleep(2)  # Esperar 2 segundos entre cada actualización
+    # Imprimir salida para depuración
+    print(f"Salida: {output}")
 
-    threading.Thread(target=run_hashcat).start()
-
-    return render_template('index.html')
+    return render_template('index.html', output=output)
 
 @app.route('/terminal', methods=['POST'])
 def terminal():
     command = request.form['command']
     
-    # Ejecutar el comando en una nueva terminal
-    terminal_command = f'gnome-terminal -- bash -c "{command}; exec bash"'
+    # Imprimir el comando para depuración
+    print(f"Ejecutando comando en terminal: {command}")
+
     try:
-        subprocess.Popen(terminal_command, shell=True)
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        output, error = process.communicate()
+        if process.returncode != 0:
+            output = error
     except Exception as e:
-        print(f"Error: {str(e)}")
+        output = f"Error: {str(e)}"
 
-    return render_template('index.html')
+    # Imprimir salida para depuración
+    print(f"Salida de terminal: {output}")
 
-@socketio.on('connect')
-def handle_connect():
-    print('Client connected')
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    print('Client disconnected')
+    return render_template('index.html', output=output)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0')
