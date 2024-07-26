@@ -95,6 +95,29 @@
         <a href="/download"><button>Download Result</button></a>
         <h2>Output:</h2>
         <pre>{{ output }}</pre>
+        <h2>Terminal:</h2>
+        <form id="terminal-form">
+            <input type="text" id="command" name="command" placeholder="Enter command" required>
+            <button type="submit">Execute</button>
+        </form>
+        <pre id="terminal-output"></pre>
     </div>
+    <script>
+        document.getElementById('terminal-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const command = document.getElementById('command').value;
+            fetch('/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ command: command })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('terminal-output').textContent = data.output;
+            });
+        });
+    </script>
 </body>
 </html>
