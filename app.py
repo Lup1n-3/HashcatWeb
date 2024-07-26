@@ -18,6 +18,20 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
 def index():
     return render_template('index.html')
 
+@socketio.on('execute_command')
+def handle_execute_command(command):
+    try:
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        while True:
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                socketio.emit('command_output', {'output': output.strip()})
+        rc = process.poll()
+    except Exception as e:
+        socketio.emit('command_output', {'output': str(e)})
+
 @app.route('/submit', methods=['POST'])
 def submit():
     hash_file = request.files['hash_file']
@@ -43,39 +57,17 @@ def submit():
     device_option = '-D 1' if use_gpu else ''
     command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
-    # Ejecutar el comando y enviar actualizaciones al cliente en tiempo real
-    def run_command(command):
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        for line in process.stdout:
-            socketio.emit('update', {'data': line})
-        process.stdout.close()
-        process.wait()
-        if process.returncode != 0:
-            error = process.stderr.read()
-            socketio.emit('update', {'data': error})
-
-    socketio.start_background_task(run_command, command)
+    socketio.emit('command_output', {'output': f'Ejecutando comando: {command}'})
+    handle_execute_command(command)
 
     return render_template('index.html')
 
 @app.route('/terminal', methods=['POST'])
 def terminal():
     command = request.form['command']
-    
-    # Ejecutar el comando y enviar actualizaciones al cliente en tiempo real
-    def run_command(command):
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        for line in process.stdout:
-            socketio.emit('update', {'data': line})
-        process.stdout.close()
-        process.wait()
-        if process.returncode != 0:
-            error = process.stderr.read()
-            socketio.emit('update', {'data': error})
-
-    socketio.start_background_task(run_command, command)
-
+    socketio.emit('command_output', {'output': f'Ejecutando comando: {command}'})
+    handle_execute_command(command)
     return render_template('index.html')
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0')
+    socketio.run(app, debug=True)

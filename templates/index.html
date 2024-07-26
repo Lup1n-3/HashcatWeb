@@ -2,104 +2,78 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hashcat Web Interface</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-        }
-        label {
-            margin-top: 10px;
-        }
-        input[type="file"],
-        input[type="number"],
-        select,
-        button,
-        input[type="text"] {
-            padding: 10px;
-            margin-top: 5px;
-        }
-        button {
-            background-color: #5cb85c;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #4cae4c;
-        }
-        pre {
-            background: #333;
-            color: #fff;
-            padding: 10px;
-            border-radius: 8px;
-            white-space: pre-wrap;
-        }
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        textarea { width: 100%; height: 200px; }
+        .output { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
+        .form-group { margin-bottom: 15px; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', (event) => {
+        document.addEventListener("DOMContentLoaded", () => {
             var socket = io();
 
-            socket.on('update', function (msg) {
-                var output = document.getElementById('output');
-                output.innerHTML += msg.data + '<br>';
-                output.scrollTop = output.scrollHeight;
+            socket.on('command_output', function(msg) {
+                var outputDiv = document.getElementById('output');
+                outputDiv.innerHTML += msg.output + '<br>';
+                outputDiv.scrollTop = outputDiv.scrollHeight;
             });
+
+            document.getElementById('hashcatForm').onsubmit = function(event) {
+                event.preventDefault();
+                var formData = new FormData(event.target);
+                fetch('/submit', {
+                    method: 'POST',
+                    body: formData
+                });
+            };
+
+            document.getElementById('terminalForm').onsubmit = function(event) {
+                event.preventDefault();
+                var command = document.getElementById('command').value;
+                socket.emit('execute_command', command);
+                document.getElementById('command').value = '';
+            };
         });
     </script>
 </head>
 <body>
     <div class="container">
         <h1>Hashcat Web Interface</h1>
-        <form action="/submit" method="post" enctype="multipart/form-data">
-            <label for="hash_file">Hash File:</label>
-            <input type="file" name="hash_file" id="hash_file" required>
-            <br>
-            <label for="charset">Charset:</label>
-            <select name="charset" id="charset" required>
-                <option value="numeric">Numeric</option>
-                <option value="alpha">Alphabetic</option>
-                <option value="alphanumeric">Alphanumeric</option>
-                <option value="special">Special</option>
-            </select>
-            <br>
-            <label for="length">Password Length:</label>
-            <input type="number" name="length" id="length" required>
-            <br>
-            <label for="use_gpu">Use GPU:</label>
-            <input type="checkbox" name="use_gpu" id="use_gpu">
-            <br>
-            <button type="submit">Submit</button>
+        <form id="hashcatForm" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="hash_file">Cargar archivo de hash WPA:</label>
+                <input type="file" name="hash_file" id="hash_file" required>
+            </div>
+            <div class="form-group">
+                <label for="charset">Tipo de contraseña:</label>
+                <select name="charset" id="charset">
+                    <option value="numeric">Solo números</option>
+                    <option value="alpha">Solo letras</option>
+                    <option value="alphanumeric">Alfanumérico</option>
+                    <option value="special">Incluir símbolos especiales</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="length">Longitud de la contraseña:</label>
+                <input type="number" name="length" id="length" required>
+            </div>
+            <div class="form-group">
+                <input type="checkbox" name="use_gpu" id="use_gpu">
+                <label for="use_gpu">Usar GPU</label>
+            </div>
+            <button type="submit">Ejecutar Hashcat</button>
         </form>
-        <br>
-        <form action="/terminal" method="post">
-            <label for="command">Terminal Command:</label>
-            <input type="text" name="command" id="command" placeholder="Enter command to execute">
-            <button type="submit">Execute</button>
+        <form id="terminalForm" method="post">
+            <div class="form-group">
+                <label for="command">Comando de terminal:</label>
+                <input type="text" id="command" name="command" required>
+            </div>
+            <button type="submit">Ejecutar</button>
         </form>
-        <br>
-        <h2>Output:</h2>
-        <pre id="output"></pre>
+        <div id="output" class="output"></div>
     </div>
 </body>
 </html>
