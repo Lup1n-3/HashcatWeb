@@ -3,6 +3,7 @@ import subprocess
 import os
 import signal
 import time
+import threading
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
@@ -15,16 +16,24 @@ HASHCAT_PATH = '/usr/bin/hashcat'  # Ruta en Kali Linux
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Variable para almacenar el proceso de hashcat
+# Variables para manejar procesos de hashcat y salida en tiempo real
 hashcat_process = None
+output_lines = []
+
+def capture_output(process):
+    global output_lines
+    for line in iter(process.stdout.readline, b''):
+        output_lines.append(line.decode('utf-8'))
+        if process.poll() is not None:
+            break
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', output='\n'.join(output_lines))
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    global hashcat_process
+    global hashcat_process, output_lines
 
     if hashcat_process and hashcat_process.poll() is None:
         return render_template('index.html', output="Hashcat is already running. Please stop it before starting a new analysis.")
@@ -50,68 +59,46 @@ def submit():
 
     # Construir el comando Hashcat
     device_option = '-D 1' if use_gpu else ''
-    command = f'xterm -e "{HASHCAT_PATH} -m 22000 \'{hash_file_path}\' -a 3 {mask} {device_option}"'
+    command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
     # Imprimir el comando para depuración
     print(f"Ejecutando comando: {command}")
 
     try:
-        hashcat_process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        output = ''
-        for line in hashcat_process.stdout:
-            output += line
-        error = hashcat_process.stderr.read()
-        if hashcat_process.returncode != 0:
-            output += error
+        xterm_command = f'xterm -e "{command}"'
+        hashcat_process = subprocess.Popen(xterm_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        output_lines = []
+        output_thread = threading.Thread(target=capture_output, args=(hashcat_process,))
+        output_thread.start()
     except Exception as e:
-        output = f"Error: {str(e)}"
+        output_lines.append(f"Error: {str(e)}")
 
-    # Imprimir salida para depuración
-    print(f"Salida: {output}")
-
-    return render_template('index.html', output=output)
-
-@app.route('/terminal', methods=['POST'])
-def terminal():
-    command = request.form['command']
-    
-    # Imprimir el comando para depuración
-    print(f"Ejecutando comando en terminal: {command}")
-
-    try:
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        output = ''
-        for line in process.stdout:
-            output += line
-        error = process.stderr.read()
-        if process.returncode != 0:
-            output += error
-    except Exception as e:
-        output = f"Error: {str(e)}"
-
-    # Imprimir salida para depuración
-    print(f"Salida de terminal: {output}")
-
-    return render_template('index.html', output=output)
+    return render_template('index.html', output='\n'.join(output_lines))
 
 @app.route('/update', methods=['POST'])
 def update():
     global hashcat_process
     if hashcat_process and hashcat_process.poll() is None:
-        hashcat_process.stdin.write(b's\n')
-        hashcat_process.stdin.flush()
-        return render_template('index.html', output="Sent 's' to hashcat.")
+        try:
+            hashcat_process.stdin.write(b's\n')
+            hashcat_process.stdin.flush()
+            return render_template('index.html', output="Sent 's' to hashcat.")
+        except Exception as e:
+            return render_template('index.html', output=f"Error sending 's': {str(e)}")
     return render_template('index.html', output="Hashcat is not running.")
 
 @app.route('/quit', methods=['POST'])
 def quit():
     global hashcat_process
     if hashcat_process and hashcat_process.poll() is None:
-        hashcat_process.stdin.write(b'q\n')
-        hashcat_process.stdin.flush()
-        hashcat_process.terminate()  # Terminate the process
-        hashcat_process = None
-        return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
+        try:
+            hashcat_process.stdin.write(b'q\n')
+            hashcat_process.stdin.flush()
+            hashcat_process.terminate()  # Terminate the process
+            hashcat_process = None
+            return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
+        except Exception as e:
+            return render_template('index.html', output=f"Error sending 'q': {str(e)}")
     return render_template('index.html', output="Hashcat is not running.")
 
 if __name__ == '__main__':
