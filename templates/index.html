@@ -60,34 +60,58 @@
             white-space: pre-wrap;
             overflow-x: auto;
         }
-        .terminal-container {
+        #terminal-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 300px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            border: 1px solid #ddd;
+            display: none; /* Hidden by default */
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        #terminal-panel pre {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            margin: 0;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .terminal-button {
             position: absolute;
             top: 10px;
             right: 10px;
-            background: #fff;
-            border: 1px solid #ddd;
+            background: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
             padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            display: none;
-            z-index: 1000;
+            border-radius: 50%;
+            font-size: 18px;
         }
-        .terminal-container.active {
-            display: block;
+        .terminal-button:hover {
+            background: #555;
+        }
+        .terminal-close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #f00;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 0 0 0 8px;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <button id="terminal-toggle" style="position: absolute; top: 10px; right: 10px;">🖥️</button>
-        <div class="terminal-container" id="terminal-container">
-            <form id="terminal-form">
-                <input type="text" id="command" name="command" placeholder="Enter command" required>
-                <button type="submit">Execute</button>
-            </form>
-            <pre id="terminal-output"></pre>
-            <button id="close-terminal">Close Terminal</button>
-        </div>
         <h1>Hashcat Web Interface</h1>
         <form action="/submit" method="post" enctype="multipart/form-data">
             <label for="hash_file">Hash File:</label>
@@ -117,25 +141,31 @@
             <button type="submit">Quit</button>
         </form>
         <br>
-        <a href="/download" download>
-            <button>Download Results</button>
-        </a>
-        <br>
         <h2>Output:</h2>
         <pre>{{ output }}</pre>
+        
+        <button class="terminal-button" onclick="toggleTerminal()">&#128241;</button>
     </div>
-    <script>
-        document.getElementById('terminal-toggle').addEventListener('click', function() {
-            document.getElementById('terminal-container').classList.toggle('active');
-        });
+    <div id="terminal-panel">
+        <button class="terminal-close" onclick="toggleTerminal()">X</button>
+        <h2>Terminal</h2>
+        <pre id="terminal-output"></pre>
+        <form id="terminal-form">
+            <input type="text" id="terminal-input" placeholder="Enter command">
+            <button type="submit">Execute</button>
+        </form>
+    </div>
 
-        document.getElementById('close-terminal').addEventListener('click', function() {
-            document.getElementById('terminal-container').classList.remove('active');
-        });
+    <script>
+        function toggleTerminal() {
+            var panel = document.getElementById('terminal-panel');
+            var isVisible = panel.style.display === 'block';
+            panel.style.display = isVisible ? 'none' : 'block';
+        }
 
         document.getElementById('terminal-form').addEventListener('submit', function(event) {
             event.preventDefault();
-            const command = document.getElementById('command').value;
+            var command = document.getElementById('terminal-input').value;
             fetch('/execute', {
                 method: 'POST',
                 headers: {
@@ -145,7 +175,8 @@
             })
             .then(response => response.json())
             .then(data => {
-                document.getElementById('terminal-output').textContent = data.output;
+                document.getElementById('terminal-output').textContent += data.output + '\n';
+                document.getElementById('terminal-input').value = '';
             });
         });
     </script>
