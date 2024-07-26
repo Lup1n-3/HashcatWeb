@@ -105,7 +105,7 @@ def quit():
 @app.route('/execute', methods=['POST'])
 def execute():
     try:
-        command = request.form['command']
+        command = request.json.get('command')
         result = subprocess.check_output(command, shell=True).decode('utf-8')
         return jsonify({'output': result})
     except Exception as e:
