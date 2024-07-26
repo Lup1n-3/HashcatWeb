@@ -7,60 +7,89 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-        }
-        #output {
-            white-space: pre-wrap;
             background-color: #f4f4f4;
-            padding: 10px;
-            border: 1px solid #ddd;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
             margin-top: 10px;
-            height: 300px;
-            overflow-y: scroll;
+        }
+        input[type="file"],
+        input[type="number"],
+        select,
+        button,
+        input[type="text"] {
+            padding: 10px;
+            margin-top: 5px;
+        }
+        button {
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        pre {
+            background: #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            white-space: pre-wrap;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script type="text/javascript" charset="utf-8">
-        document.addEventListener('DOMContentLoaded', (event) => {
-            var socket = io.connect('http://' + document.domain + ':' + location.port);
-
-            socket.on('update', function(msg) {
-                var output = document.getElementById('output');
-                output.innerHTML += msg.data + '\n';
-                output.scrollTop = output.scrollHeight;
-            });
-        });
-    </script>
 </head>
 <body>
-    <h1>Hashcat Web Interface</h1>
-    <form action="/submit" method="post" enctype="multipart/form-data">
-        <label for="hash_file">Cargar archivo de hash:</label>
-        <input type="file" id="hash_file" name="hash_file" required><br><br>
-        
-        <label for="charset">Charset:</label>
-        <select id="charset" name="charset">
-            <option value="numeric">Númerico</option>
-            <option value="alpha">Texto</option>
-            <option value="alphanumeric">Alfanumérico</option>
-            <option value="special">Especial</option>
-        </select><br><br>
-        
-        <label for="length">Longitud:</label>
-        <input type="number" id="length" name="length" min="1" required><br><br>
-        
-        <label for="use_gpu">Usar GPU:</label>
-        <input type="checkbox" id="use_gpu" name="use_gpu"><br><br>
-        
-        <input type="submit" value="Enviar">
-    </form>
-    
-    <h2>Terminal</h2>
-    <form action="/terminal" method="post">
-        <label for="command">Comando:</label>
-        <input type="text" id="command" name="command" required>
-        <input type="submit" value="Ejecutar">
-    </form>
-    
-    <div id="output"></div>
+    <div class="container">
+        <h1>Hashcat Web Interface</h1>
+        <form action="/submit" method="post" enctype="multipart/form-data">
+            <label for="hash_file">Hash File:</label>
+            <input type="file" name="hash_file" id="hash_file" required>
+            <br>
+            <label for="charset">Charset:</label>
+            <select name="charset" id="charset" required>
+                <option value="numeric">Numeric</option>
+                <option value="alpha">Alphabetic</option>
+                <option value="alphanumeric">Alphanumeric</option>
+                <option value="special">Special</option>
+            </select>
+            <br>
+            <label for="length">Password Length:</label>
+            <input type="number" name="length" id="length" required>
+            <br>
+            <label for="use_gpu">Use GPU:</label>
+            <input type="checkbox" name="use_gpu" id="use_gpu">
+            <br>
+            <button type="submit">Submit</button>
+        </form>
+        <br>
+        <form action="/terminal" method="post">
+            <label for="command">Terminal Command:</label>
+            <input type="text" name="command" id="command" placeholder="Enter command to execute">
+            <button type="submit">Execute</button>
+        </form>
+        <br>
+        {% if output %}
+        <h2>Output:</h2>
+        <pre>{{ output }}</pre>
+        {% endif %}
+    </div>
 </body>
 </html>

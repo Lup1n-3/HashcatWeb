@@ -1,11 +1,8 @@
 from flask import Flask, request, render_template
-from flask_socketio import SocketIO, emit
 import subprocess
 import os
-import time
 
 app = Flask(__name__)
-socketio = SocketIO(app)
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -49,22 +46,17 @@ def submit():
     print(f"Ejecutando comando: {command}")
 
     try:
-        # Ejecutar el comando y leer la salida en tiempo real
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        while True:
-            output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
-                break
-            if output:
-                socketio.emit('update', {'data': output.strip()})
-            time.sleep(0.1)
-        error = process.stderr.read()
-        if error:
-            socketio.emit('update', {'data': error.strip()})
+        output, error = process.communicate()
+        if process.returncode != 0:
+            output = error
     except Exception as e:
-        socketio.emit('update', {'data': f"Error: {str(e)}"})
+        output = f"Error: {str(e)}"
 
-    return render_template('index.html')
+    # Imprimir salida para depuración
+    print(f"Salida: {output}")
+
+    return render_template('index.html', output=output)
 
 @app.route('/terminal', methods=['POST'])
 def terminal():
@@ -74,26 +66,17 @@ def terminal():
     print(f"Ejecutando comando en terminal: {command}")
 
     try:
-        # Ejecutar el comando y leer la salida en tiempo real
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        while True:
-            output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
-                break
-            if output:
-                socketio.emit('update', {'data': output.strip()})
-            time.sleep(0.1)
-        error = process.stderr.read()
-        if error:
-            socketio.emit('update', {'data': error.strip()})
+        output, error = process.communicate()
+        if process.returncode != 0:
+            output = error
     except Exception as e:
-        socketio.emit('update', {'data': f"Error: {str(e)}"})
+        output = f"Error: {str(e)}"
 
-    return render_template('index.html')
+    # Imprimir salida para depuración
+    print(f"Salida de terminal: {output}")
 
-@socketio.on('connect')
-def test_connect():
-    emit('my response', {'data': 'Connected'})
+    return render_template('index.html', output=output)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True, host='0.0.0.0')
