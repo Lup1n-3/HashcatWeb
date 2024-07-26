@@ -63,7 +63,7 @@ def submit():
     print(f"Ejecutando comando: {command}")
 
     try:
-        xterm_command = f'xterm -e "{command}"'
+        xterm_command = f'xterm -hold -e "{command}"'
         hashcat_process = subprocess.Popen(xterm_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         output_lines = []
         output_thread = threading.Thread(target=capture_output, args=(hashcat_process,))
