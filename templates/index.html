@@ -18,6 +18,7 @@
             background: #fff;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
         h1 {
             text-align: center;
@@ -59,6 +60,48 @@
             white-space: pre-wrap;
             overflow-x: auto;
         }
+        .terminal-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        .terminal {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 400px;
+            height: 300px;
+            background: #333;
+            color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            padding: 20px;
+            flex-direction: column;
+        }
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .terminal-body {
+            flex: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .terminal input {
+            width: calc(100% - 20px);
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #444;
+            border: none;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -94,6 +137,55 @@
         <br>
         <h2>Output:</h2>
         <pre>{{ output }}</pre>
+
+        <button class="terminal-button" onclick="toggleTerminal()">
+            <img src="https://img.icons8.com/ios-filled/50/000000/console.png"/>
+        </button>
+        <div class="terminal" id="terminal">
+            <div class="terminal-header">
+                <span>Terminal</span>
+                <button onclick="toggleTerminal()">X</button>
+            </div>
+            <div class="terminal-body" id="terminal-body"></div>
+            <input type="text" id="terminal-input" onkeydown="handleTerminalInput(event)">
+        </div>
     </div>
+    <script>
+        function toggleTerminal() {
+            const terminal = document.getElementById('terminal');
+            if (terminal.style.display === 'none' || terminal.style.display === '') {
+                terminal.style.display = 'flex';
+            } else {
+                terminal.style.display = 'none';
+            }
+        }
+
+        function handleTerminalInput(event) {
+            if (event.key === 'Enter') {
+                const input = event.target;
+                const command = input.value;
+                input.value = '';
+
+                fetch('/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ command })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const terminalBody = document.getElementById('terminal-body');
+                    terminalBody.innerText += `> ${command}\n${data.output}\n`;
+                    terminalBody.scrollTop = terminalBody.scrollHeight;
+                })
+                .catch(error => {
+                    const terminalBody = document.getElementById('terminal-body');
+                    terminalBody.innerText += `> ${command}\nError: ${error}\n`;
+                    terminalBody.scrollTop = terminalBody.scrollHeight;
+                });
+            }
+        }
+    </script>
 </body>
 </html>

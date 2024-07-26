@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import subprocess
 import os
 import time
@@ -101,6 +101,15 @@ def quit():
         return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
     except Exception as e:
         return render_template('index.html', output=f"Error sending 'q': {str(e)}")
+
+@app.route('/execute', methods=['POST'])
+def execute():
+    try:
+        command = request.form['command']
+        result = subprocess.check_output(command, shell=True).decode('utf-8')
+        return jsonify({'output': result})
+    except Exception as e:
+        return jsonify({'output': f"Error: {str(e)}"})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
