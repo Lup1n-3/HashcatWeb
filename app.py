@@ -63,6 +63,7 @@ def submit():
 
     try:
         hashcat_process = subprocess.Popen(xterm_command, shell=True)
+        time.sleep(2)  # Asegúrate de darle tiempo al xterm para iniciar
         return render_template('index.html', output='Hashcat started. Check the output below.')
     except Exception as e:
         return render_template('index.html', output=f"Error: {str(e)}")
