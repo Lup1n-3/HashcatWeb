@@ -119,14 +119,13 @@ def execute():
 
 @app.route('/download')
 def download():
-    try:
-        result_file = os.path.join(app.config['RESULTS_FOLDER'], 'result.txt')
-        if os.path.exists(result_file):
-            return send_from_directory(app.config['RESULTS_FOLDER'], 'result.txt', as_attachment=True)
-        else:
-            return render_template('index.html', output="Result file not found.")
-    except Exception as e:
-        return render_template('index.html', output=f"Error: {str(e)}")
+    # Ruta al archivo de resultados
+    result_file = 'path/to/result.txt'
+    
+    if os.path.exists(result_file):
+        return send_file(result_file, as_attachment=True)
+    else:
+        return "No results found", 404
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
