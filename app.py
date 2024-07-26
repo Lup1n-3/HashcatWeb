@@ -50,11 +50,13 @@ def submit():
     device_option = '-D 1' if use_gpu else ''
     command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
+    # Escapar el comando para zsh
+    xterm_command = f'xterm -hold -e "bash -c \'{command}\'"'
+
     # Imprimir el comando para depuración
-    print(f"Ejecutando comando: {command}")
+    print(f"Ejecutando comando: {xterm_command}")
 
     try:
-        xterm_command = f'xterm -hold -e "{command}"'
         hashcat_process = subprocess.Popen(xterm_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         output = ''
         while True:
