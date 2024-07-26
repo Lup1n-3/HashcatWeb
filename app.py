@@ -14,6 +14,10 @@ HASHCAT_PATH = '/usr/bin/hashcat'  # Actualiza esta ruta en Kali Linux
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
