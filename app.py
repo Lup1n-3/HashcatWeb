@@ -15,6 +15,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 # Variables para manejar procesos de hashcat y salida en tiempo real
+hashcat_session_name = 'hashcat_session'
 hashcat_process = None
 hashcat_output_file = 'hashcat_output.txt'
 
@@ -30,9 +31,10 @@ def index():
 def submit():
     global hashcat_process
 
-    if hashcat_process and hashcat_process.poll() is None:
-        return render_template('index.html', output="Hashcat is already running. Please stop it before starting a new analysis.")
-
+    # Detener cualquier proceso de Hashcat ya en ejecución
+    if hashcat_process:
+        subprocess.call(['tmux', 'kill-session', '-t', hashcat_session_name])
+    
     hash_file = request.files['hash_file']
     if hash_file:
         hash_file_path = os.path.join(app.config['UPLOAD_FOLDER'], hash_file.filename)
@@ -56,15 +58,15 @@ def submit():
     device_option = '-D 1' if use_gpu else ''
     command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
-    # Escapar el comando para zsh
-    xterm_command = f'xterm -hold -e "bash -c \'{command} | tee {hashcat_output_file}\'"'
+    # Ejecutar Hashcat en una nueva sesión de tmux
+    tmux_command = f'tmux new-session -d -s {hashcat_session_name} "bash -c \'{command} | tee {hashcat_output_file}\'"'
 
     # Imprimir el comando para depuración
-    print(f"Ejecutando comando: {xterm_command}")
+    print(f"Ejecutando comando: {tmux_command}")
 
     try:
-        hashcat_process = subprocess.Popen(xterm_command, shell=True)
-        time.sleep(2)  # Dar tiempo para que xterm se abra y comience a ejecutar
+        subprocess.Popen(tmux_command, shell=True)
+        time.sleep(2)  # Dar tiempo para que tmux se abra y comience a ejecutar
     except Exception as e:
         output = f"Error: {str(e)}"
         return render_template('index.html', output=output)
@@ -73,11 +75,10 @@ def submit():
 
 @app.route('/update', methods=['POST'])
 def update():
-    global hashcat_process
-    if hashcat_process and hashcat_process.poll() is None:
+    if hashcat_process:
         try:
-            # Enviar 's' a la terminal xterm
-            os.system(f'echo s > /proc/{hashcat_process.pid}/fd/0')
+            # Enviar 's' a la sesión de tmux
+            subprocess.call(['tmux', 'send-keys', '-t', hashcat_session_name, 's', 'C-m'])
             time.sleep(1)  # Esperar un momento para que el proceso maneje el comando
             return index()  # Actualizar la página para mostrar la salida
         except Exception as e:
@@ -86,13 +87,11 @@ def update():
 
 @app.route('/quit', methods=['POST'])
 def quit():
-    global hashcat_process
-    if hashcat_process and hashcat_process.poll() is None:
+    if hashcat_process:
         try:
-            # Enviar 'q' a la terminal xterm y terminar el proceso
-            os.system(f'echo q > /proc/{hashcat_process.pid}/fd/0')
-            hashcat_process.terminate()  # Terminate the process
-            hashcat_process = None
+            # Enviar 'q' a la sesión de tmux y terminar el proceso
+            subprocess.call(['tmux', 'send-keys', '-t', hashcat_session_name, 'q', 'C-m'])
+            subprocess.call(['tmux', 'kill-session', '-t', hashcat_session_name])
             return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
         except Exception as e:
             return render_template('index.html', output=f"Error sending 'q': {str(e)}")
