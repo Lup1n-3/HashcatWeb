@@ -54,12 +54,6 @@
             border-radius: 8px;
             white-space: pre-wrap;
         }
-        .button-container {
-            margin-top: 10px;
-        }
-        .button-container button {
-            margin-right: 10px;
-        }
     </style>
 </head>
 <body>
@@ -86,14 +80,12 @@
             <button type="submit">Submit</button>
         </form>
         <br>
-        <div class="button-container">
-            <form action="/update" method="post">
-                <button type="submit">Update Status</button>
-            </form>
-            <form action="/quit" method="post">
-                <button type="submit">Quit</button>
-            </form>
-        </div>
+        <form action="/update" method="post">
+            <button type="submit">Update Status</button>
+        </form>
+        <form action="/quit" method="post">
+            <button type="submit">Quit</button>
+        </form>
         <br>
         {% if output %}
         <h2>Output:</h2>
