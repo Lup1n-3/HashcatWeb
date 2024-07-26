@@ -72,10 +72,20 @@ def submit():
 @app.route('/update', methods=['POST'])
 def update():
     try:
+        # Limpiar el archivo de salida
+        open(hashcat_output_file, 'w').close()
+        
         # Enviar la tecla 's' a la sesión tmux
         subprocess.call(['tmux', 'send-keys', '-t', tmux_session_name, 's', 'C-m'])
         time.sleep(1)  # Esperar un momento para que el proceso maneje el comando
-        return index()  # Actualizar la página para mostrar la salida
+        
+        # Leer la salida actualizada
+        output = ''
+        if os.path.exists(hashcat_output_file):
+            with open(hashcat_output_file, 'r') as file:
+                output = file.read()
+        
+        return render_template('index.html', output=output)
     except Exception as e:
         return render_template('index.html', output=f"Error sending 's': {str(e)}")
 
@@ -86,6 +96,7 @@ def quit():
         subprocess.call(['tmux', 'send-keys', '-t', tmux_session_name, 'q', 'C-m'])
         time.sleep(1)  # Esperar un momento para que el proceso maneje el comando
         subprocess.call(['tmux', 'kill-session', '-t', tmux_session_name])
+        
         return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
     except Exception as e:
         return render_template('index.html', output=f"Error sending 'q': {str(e)}")
