@@ -55,7 +55,7 @@ def submit():
     device_option = '-D 1' if use_gpu else ''
     command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
 
-    # Escapar el comando para zsh
+    # Redirigir salida a un archivo
     xterm_command = f'xterm -hold -e "bash -c \'{command} > {OUTPUT_FILE} 2>&1\'"'
 
     # Imprimir el comando para depuración
@@ -72,7 +72,7 @@ def update():
     if hashcat_process and hashcat_process.poll() is None:
         try:
             # Enviar 's' usando xdotool
-            os.system(f'xdotool search --name "xterm" key s')
+            os.system('xdotool search --name "xterm" key s')
             return render_template('index.html', output="Sent 's' to hashcat.")
         except Exception as e:
             return render_template('index.html', output=f"Error sending 's': {str(e)}")
@@ -83,7 +83,7 @@ def quit():
     if hashcat_process and hashcat_process.poll() is None:
         try:
             # Enviar 'q' usando xdotool
-            os.system(f'xdotool search --name "xterm" key q')
+            os.system('xdotool search --name "xterm" key q')
             hashcat_process.terminate()  # Terminate the process
             return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
         except Exception as e:
