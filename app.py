@@ -73,11 +73,12 @@ def submit():
 def update():
     try:
         # Limpiar el archivo de salida
-        open(hashcat_output_file, 'w').close()
+        with open(hashcat_output_file, 'w') as file:
+            file.write('')  # Limpiar el contenido del archivo
         
         # Enviar la tecla 's' a la sesión tmux
         subprocess.call(['tmux', 'send-keys', '-t', tmux_session_name, 's', 'C-m'])
-        time.sleep(1)  # Esperar un momento para que el proceso maneje el comando
+        time.sleep(2)  # Esperar un momento para que el proceso maneje el comando
         
         # Leer la salida actualizada
         output = ''
@@ -94,7 +95,7 @@ def quit():
     try:
         # Enviar la tecla 'q' a la sesión tmux y luego matar la sesión
         subprocess.call(['tmux', 'send-keys', '-t', tmux_session_name, 'q', 'C-m'])
-        time.sleep(1)  # Esperar un momento para que el proceso maneje el comando
+        time.sleep(2)  # Esperar un momento para que el proceso maneje el comando
         subprocess.call(['tmux', 'kill-session', '-t', tmux_session_name])
         
         return render_template('index.html', output="Sent 'q' to hashcat and terminated the process.")
