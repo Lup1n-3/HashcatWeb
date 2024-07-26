@@ -1,18 +1,23 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify, send_from_directory
 import subprocess
 import os
 import time
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
+RESULTS_FOLDER = 'results'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['RESULTS_FOLDER'] = RESULTS_FOLDER
 
 # Ruta completa a Hashcat
 HASHCAT_PATH = '/usr/bin/hashcat'  # Ruta en Kali Linux
 
-# Aseguramos que la carpeta de uploads existe
+# Aseguramos que las carpetas de uploads y results existen
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+if not os.path.exists(RESULTS_FOLDER):
+    os.makedirs(RESULTS_FOLDER)
 
 # Variables para manejar procesos de hashcat y salida en tiempo real
 tmux_session_name = 'hashcat_session'
@@ -52,7 +57,8 @@ def submit():
 
     # Construir el comando Hashcat
     device_option = '-D 1' if use_gpu else ''
-    command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option}'
+    result_file = os.path.join(app.config['RESULTS_FOLDER'], 'result.txt')
+    command = f'{HASHCAT_PATH} -m 22000 "{hash_file_path}" -a 3 {mask} {device_option} --outfile={result_file}'
 
     # Ejecutar Hashcat en una nueva sesión tmux
     tmux_command = f'tmux new-session -d -s {tmux_session_name} bash -c "{command} | tee {hashcat_output_file}"'
@@ -110,6 +116,17 @@ def execute():
         return jsonify({'output': result})
     except Exception as e:
         return jsonify({'output': f"Error: {str(e)}"})
+
+@app.route('/download')
+def download():
+    try:
+        result_file = os.path.join(app.config['RESULTS_FOLDER'], 'result.txt')
+        if os.path.exists(result_file):
+            return send_from_directory(app.config['RESULTS_FOLDER'], 'result.txt', as_attachment=True)
+        else:
+            return render_template('index.html', output="Result file not found.")
+    except Exception as e:
+        return render_template('index.html', output=f"Error: {str(e)}")
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
